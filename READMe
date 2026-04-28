@@ -1,0 +1,103 @@
+## Use Case - UC-012 : Inventory management system
+
+    This is an inventory management system for a retail or warehouse business. This system tracks stock levels, manages suppliers, handles purchase orders, triggers reorder alerts, and maintains a complete audit trail of all stock movements
+
+# Use case details
+
+Actors :- Store manager, Warehouse Staff, Supplier, System(Reorder Scheduler)
+
+Preconditions :- Product catalog is setup with SKU codes. Suppliers are registered. Minimum  stock thresholds are configured per product
+
+Trigger :- A new stock shipment arrives, or stock falls below the reorder threshold.
+
+Main Flow :-    1. Staff receives shipment and scans product SKUs
+                2. System updates stock quantity for each product.
+                3. System records goods-received note(GRN) with quantity, date, and supplier.
+                4. Manager monitors stock levels via dashboard.
+                5. When stock falls below reorder level, system auto generates a purchase order(PO)
+                6. Manager approves PO and sends to supplier.
+                7. Supplier fulfils order; stock updated on receipt.
+                8. System logs every stock movement in the audit trail
+        
+Alternate Flow  :-   
+                    A1: Received quantoty differs from PO quantity -> Flag discrepancy; allow partial accepatance
+                    A2: Product not in catalog -> Prompt staff to register new product.
+                    A3: Supplier delivers expired goods -> Mark as rejected; raise return order.
+                    A4: Manager manually adjusts stocks(damage,theft) -> Require reason code; log adjustment.
+
+Exception Flow :- 
+                    E1: SKU not found -> 'Product SKU not recognized' error.
+                    E2: Negative stock after adjustment -> Block and alert manager.
+                    E3: Duplicate GRN for same PO -> 'GRN already recorded for this PO' error.
+                    E4: PO approved but supplier not responding -> Escalation alert after 48 hours.
+                    E5: Unauthorized stock adjustment -> 'Insufficient privileges' error.
+
+Postconditions :- Stock levels updataed. GRNrecorde. PO status updated. Audit trail entry added. Reorder alert cleared if stock now above the threshold.
+
+Non-functional :- Stock dashboard refreshes in real time. Audit trail must be immutable. Reorder alert triggered within 1 minute of threshold breach. System supports 50,000 SKUs and 500 concurrent users
+
+# Class Design
+
+1.  Class - Product
+    Attributes - sku, name, category, unit, reorderLevel, currentStock, supplierId
+    Key methods - updateStock(), isLowStock(), getStockHistory()
+
+2.  Class - Supplier
+    Attributes - supplierId, name, contact, email, leadTimeDays, products[]
+    Key methods - createPO(), getDeliveryHistory()
+
+3.  Class - PurchaseOrder
+    Attributes - poId, supplierId, items[], status, createdDate, approvedDate
+    Key methods - approve(), send(), receive(), cancel()
+
+4.  Class - GoodsReceived
+    Attributes - grnId, poId, receivedItems[], receivedDate, staffId, discrepancies[]
+    Key methods - record(), flagDiscrepancy(), close()
+
+5.  Class - StockMovement
+    Attributes - movementId, sku, type, quantity, reason, staffId, timestamp
+    Key methods - log(), getAuditTrail()
+
+6.  Class - Warehouse
+    Attributes - warehouseId, name, location, products[], zones[]
+    Key methods - getDashboard(), triggerReorder(), getAlerts()
+
+# Stock Movement Types
+
+1.  Movement Type - RECEIPT
+    Trigger - Goods received from supplier
+    Stock Effect - (+quantity)
+    Requires Approval - No
+
+2.  Movement Type - SALE
+    Trigger - Product sold to customer
+    Stock Effect - (-quantity)
+    Requires Approval - No
+
+3.  Movement Type - ADJUSTMENT
+    Trigger - MAnual correction (damage/theft)
+    Stock Effect - (+/-quantity)
+    Requires Approval - Yes
+
+4.  Movement Type - RETURN
+    Trigger - Customer returns product
+    Stock Effect - (+quantity)
+    Requires Approval - No
+
+5.  Movement Type - WRITE_OFF
+    Trigger - Expired or unsellable goods
+    Stock Effect - (-quantity)
+    Requires Approval - Yes
+
+6.  Movement Type - TRANSFER
+    Trigger - Between warehouses/zones
+    Stock Effect - (+/-quantity)
+    Requires Approval - No
+
+
+# How to run this project
+1. Open PowerShell in this folder.
+2. Run tests: python -m unittest discover -s tests
+3. Run demo: python run_demo.py
+4. User case inputs: python inventory_app.py
+
