@@ -100,4 +100,3 @@ Non-functional :- Stock dashboard refreshes in real time. Audit trail must be im
 2. Run tests: python -m unittest discover -s tests
 3. Run demo: python run_demo.py
 4. User case inputs: python inventory_app.py
-
